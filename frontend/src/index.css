@@ -1,0 +1,23 @@
+:root {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  color: #14213d;
+  background:
+    radial-gradient(circle at top, rgba(252, 163, 17, 0.32), transparent 30%),
+    linear-gradient(135deg, #f6f3eb 0%, #e9edf5 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}

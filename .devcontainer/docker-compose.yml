@@ -1,0 +1,59 @@
+services:
+  frontend:
+    image: node:20
+    working_dir: /workspaces
+    environment:
+      DEVCONTAINER_ROLE: frontend
+    volumes:
+      - ..:/workspaces:cached
+      - frontend-node-modules:/workspaces/frontend/node_modules
+      - root-node-modules:/workspaces/node_modules
+    command: /bin/bash /workspaces/.devcontainer/container-init.sh
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  backend:
+    image: node:20
+    working_dir: /workspaces
+    environment:
+      DEVCONTAINER_ROLE: backend
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+      MYSQL_USER: myhaven
+      MYSQL_PASSWORD: myhaven
+      MYSQL_DATABASE: myhaven
+    volumes:
+      - ..:/workspaces:cached
+      - backend-node-modules:/workspaces/backend/node_modules
+      - root-node-modules:/workspaces/node_modules
+    command: /bin/bash /workspaces/.devcontainer/container-init.sh
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: mysql:8.4.8
+    restart: always
+    environment:
+      MYSQL_DATABASE: myhaven
+      MYSQL_USER: myhaven
+      MYSQL_PASSWORD: myhaven
+      MYSQL_ROOT_PASSWORD: myhaven
+    volumes:
+      - mysql-data:/var/lib/mysql
+    expose:
+      - "3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-umyhaven", "-pmyhaven"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  frontend-node-modules:
+  backend-node-modules:
+  root-node-modules:
+  mysql-data:

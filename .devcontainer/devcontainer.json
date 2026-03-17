@@ -1,0 +1,35 @@
+{
+  "name": "Fullstack Node + React",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "frontend",
+  "workspaceFolder": "/workspaces",
+  "remoteUser": "node",
+  "remoteEnv": {
+    "CODEX_HOME": "/home/node/.codex"
+  },
+  "shutdownAction": "stopCompose",
+  "postCreateCommand": ".devcontainer/post-create.sh",
+  "forwardPorts": [5173, 3001],
+  "portsAttributes": {
+    "5173": {
+      "label": "Vite frontend",
+      "onAutoForward": "notify"
+    },
+    "3001": {
+      "label": "Node backend",
+      "onAutoForward": "silent"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dsznajder.es7-react-js-snippets",
+        "openai.chatgpt",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.codex,target=/home/node/.codex,type=bind,consistency=cached"
+  ]
+}

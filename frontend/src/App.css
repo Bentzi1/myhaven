@@ -1,0 +1,55 @@
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.hero {
+  width: min(720px, 100%);
+  padding: 3rem;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 24px 80px rgba(23, 30, 52, 0.12);
+  backdrop-filter: blur(10px);
+}
+
+.eyebrow {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #a1431f;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(2.5rem, 7vw, 4.5rem);
+  line-height: 0.95;
+  color: #14213d;
+}
+
+.lede {
+  margin: 1.25rem 0 0;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: #3a4359;
+}
+
+.status-card {
+  margin-top: 2rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 18px;
+  background: #14213d;
+  color: #f8f5ef;
+}
+
+.status-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #fca311;
+}
