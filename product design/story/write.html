@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haven - Write</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen font-sans">
+    
+    <div class="w-full max-w-[390px] h-[844px] bg-white relative overflow-hidden shadow-2xl sm:rounded-[40px] border-[8px] border-[#FDF9F3] flex flex-col">
+        
+        <div class="flex justify-between items-center px-6 pt-12 pb-4 bg-white border-b border-[#FDF9F3] z-10">
+            <button class="text-[#78A6C8] text-base font-medium hover:opacity-80 transition">Cancel</button>
+            <h2 class="text-lg font-bold text-gray-900">New Story</h2>
+            <button class="text-[#D1D5DB] text-base font-medium cursor-not-allowed">Publish</button>
+        </div>
+
+        <div class="flex-1 flex flex-col p-6 bg-white relative">
+            <div class="flex-1 bg-[#F9F7FD] rounded-2xl p-5 relative shadow-inner">
+                <textarea 
+                    id="storyInput"
+                    class="w-full h-full bg-transparent resize-none outline-none text-[#111827] placeholder-[#9CA3AF] text-lg leading-relaxed" 
+                    placeholder="This is a safe space. Share what's on your mind..."
+                    maxlength="1500"
+                ></textarea>
+                
+                <div class="absolute bottom-4 right-4 text-xs font-medium text-[#9CA3AF]">
+                    <span id="charCount">0</span> / 1500
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white px-6 pb-12 pt-4 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.03)] z-10 relative">
+            <p class="text-[10px] text-center text-gray-400 mb-4 px-4">
+                Your story will be scanned to ensure no identifying details are revealed.
+            </p>
+            <button class="w-full bg-gradient-to-r from-[#D9E6DA] to-[#EBE3F0] text-[#111827] font-semibold py-4 rounded-2xl shadow-sm hover:opacity-90 transition flex items-center justify-center gap-2">
+                <svg class="w-5 h-5 text-[#111827]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                AI Anonymity Check
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        const textarea = document.getElementById('storyInput');
+        const charCount = document.getElementById('charCount');
+
+        textarea.addEventListener('input', function() {
+            const currentLength = this.value.length;
+            charCount.textContent = currentLength;

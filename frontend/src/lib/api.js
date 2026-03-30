@@ -22,7 +22,9 @@ async function request(path, options = {}) {
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(payload.message || "Request failed.");
+    const error = new Error(payload.message || "Request failed.");
+    error.payload = payload;
+    throw error;
   }
 
   return payload;
@@ -78,6 +80,62 @@ export function logout(token) {
 
 export function getMyStories(token) {
   return request("/dashboard/my-stories", {
+    token
+  });
+}
+
+export function getStories(token) {
+  return request("/stories", {
+    token
+  });
+}
+
+export function getStory(storyId, token) {
+  return request(`/stories/${storyId}`, {
+    token
+  });
+}
+
+export function runStoryPrivacyCheck(body, token) {
+  return request("/stories/privacy-check", {
+    method: "POST",
+    token,
+    body: {
+      body
+    }
+  });
+}
+
+export function createStory(body, token) {
+  return request("/stories", {
+    method: "POST",
+    token,
+    body: {
+      body
+    }
+  });
+}
+
+export function updateStory(storyId, body, token) {
+  return request(`/stories/${storyId}`, {
+    method: "PATCH",
+    token,
+    body: {
+      body
+    }
+  });
+}
+
+export function deleteStory(storyId, token) {
+  return request(`/stories/${storyId}`, {
+    method: "DELETE",
+    token
+  });
+}
+
+export function sendStoryHug(storyId, token) {
+  return request(`/stories/${storyId}/hugs`, {
+    method: "POST",
     token
   });
 }
