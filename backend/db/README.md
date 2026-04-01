@@ -16,4 +16,11 @@ This directory is the source of truth for backend-owned MySQL schema changes.
   - policy versions
   - policy acceptances
 
-Story, comment, and unread-tracking tables should be added in later migrations once their product rules are finalized.
+- `002_story_management_schema.sql` adds story-management data structures:
+  - stories with registered or guest-session ownership
+  - story privacy scan audit records
+  - story revision history
+  - story hugs
+  - compatibility import from the legacy anonymous story schema when those older tables are present
+
+Comment and unread-tracking tables remain deferred until those product rules are finalized.

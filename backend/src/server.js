@@ -23,6 +23,15 @@ const {
   pool
 } = require("./db");
 const { getPolicyPresentation } = require("./policyContent");
+const {
+  createStoryChecksum,
+  createStoryExcerpt,
+  generateStoryTitle,
+  normalizeStoryBody,
+  runPrivacyCheck,
+  suggestStoryTag,
+  validateStoryBody
+} = require("./story");
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -40,7 +49,7 @@ const loginAttempts = createAttemptStore();
 app.use(
   cors({
     origin: frontendOrigin,
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
@@ -255,6 +264,280 @@ async function revokeSession(session) {
       WHERE id = ?
     `,
     [session.id]
+  );
+}
+
+function isRegisteredSession(session) {
+  return session?.session_type === "registered";
+}
+
+function buildStoryActorValues(session) {
+  if (isRegisteredSession(session)) {
+    return {
+      userId: session.user_id,
+      guestSessionId: null
+    };
+  }
+
+  return {
+    userId: null,
+    guestSessionId: session?.id || null
+  };
+}
+
+async function getStoryPostingStatus(session) {
+  if (!session) {
+    return {
+      ok: false,
+      statusCode: 401,
+      message: "Start a session before sharing a story."
+    };
+  }
+
+  const activePolicy = await getActivePolicyVersion();
+
+  if (!activePolicy) {
+    return {
+      ok: false,
+      statusCode: 503,
+      message: "No active policy version is available."
+    };
+  }
+
+  const hasAcceptedPolicy = await getPolicyAcceptanceStatus(session, activePolicy);
+
+  if (!hasAcceptedPolicy) {
+    return {
+      ok: false,
+      statusCode: 403,
+      message: "Accept the current policy before sharing a story."
+    };
+  }
+
+  return {
+    ok: true,
+    activePolicy
+  };
+}
+
+function getViewerAuthorSelect(session, storyAlias = "s") {
+  if (isRegisteredSession(session)) {
+    return {
+      sql: `CASE WHEN ${storyAlias}.author_user_id = ? THEN 1 ELSE 0 END AS viewer_is_author`,
+      params: [session.user_id]
+    };
+  }
+
+  if (session?.session_type === "guest") {
+    return {
+      sql: `CASE WHEN ${storyAlias}.author_guest_session_id = ? THEN 1 ELSE 0 END AS viewer_is_author`,
+      params: [session.id]
+    };
+  }
+
+  return {
+    sql: "0 AS viewer_is_author",
+    params: []
+  };
+}
+
+function getOwnedByViewerSelect(session, storyAlias = "s") {
+  if (isRegisteredSession(session)) {
+    return {
+      sql: `CASE WHEN ${storyAlias}.author_user_id = ? THEN 1 ELSE 0 END AS owned_by_viewer`,
+      params: [session.user_id]
+    };
+  }
+
+  return {
+    sql: "0 AS owned_by_viewer",
+    params: []
+  };
+}
+
+function getViewerHuggedSelect(session, storyAlias = "s") {
+  if (isRegisteredSession(session)) {
+    return {
+      sql: `EXISTS(
+        SELECT 1
+        FROM story_hugs shv
+        WHERE shv.story_id = ${storyAlias}.id
+          AND shv.user_id = ?
+      ) AS viewer_has_hugged`,
+      params: [session.user_id]
+    };
+  }
+
+  if (session?.session_type === "guest") {
+    return {
+      sql: `EXISTS(
+        SELECT 1
+        FROM story_hugs shv
+        WHERE shv.story_id = ${storyAlias}.id
+          AND shv.guest_session_id = ?
+      ) AS viewer_has_hugged`,
+      params: [session.id]
+    };
+  }
+
+  return {
+    sql: "0 AS viewer_has_hugged",
+    params: []
+  };
+}
+
+function buildStorySummary(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    tagLabel: row.tag_label,
+    excerpt: createStoryExcerpt(row.body),
+    publishedAt: row.published_at,
+    hugCount: Number(row.hug_count || 0),
+    ownedByViewer: Boolean(row.owned_by_viewer)
+  };
+}
+
+function buildStoryDetail(row) {
+  const ownedByViewer = Boolean(row.owned_by_viewer);
+  const viewerIsAuthor = Boolean(row.viewer_is_author);
+
+  return {
+    id: row.id,
+    title: row.title,
+    tagLabel: row.tag_label,
+    body: row.body,
+    status: row.status,
+    publishedAt: row.published_at,
+    metadata: "Published anonymously",
+    hugCount: Number(row.hug_count || 0),
+    viewerHasHugged: Boolean(row.viewer_has_hugged),
+    viewerIsAuthor,
+    canEdit: ownedByViewer && row.status !== "deleted",
+    canDelete: ownedByViewer && row.status !== "deleted",
+    canSendHug:
+      row.status === "published" && !viewerIsAuthor && !Boolean(row.viewer_has_hugged)
+  };
+}
+
+async function fetchStoryById(storyId, session) {
+  const viewerAuthorSelect = getViewerAuthorSelect(session);
+  const ownedByViewerSelect = getOwnedByViewerSelect(session);
+  const viewerHuggedSelect = getViewerHuggedSelect(session);
+  const [rows] = await pool.query(
+    `
+      SELECT
+        s.id,
+        s.author_user_id,
+        s.author_guest_session_id,
+        s.title,
+        s.tag_label,
+        s.body,
+        s.status,
+        s.published_at,
+        COALESCE(COUNT(sh.id), 0) AS hug_count,
+        ${viewerAuthorSelect.sql},
+        ${ownedByViewerSelect.sql},
+        ${viewerHuggedSelect.sql}
+      FROM stories s
+      LEFT JOIN story_hugs sh ON sh.story_id = s.id
+      WHERE s.id = ?
+      GROUP BY s.id
+      LIMIT 1
+    `,
+    [
+      ...viewerAuthorSelect.params,
+      ...ownedByViewerSelect.params,
+      ...viewerHuggedSelect.params,
+      storyId
+    ]
+  );
+
+  const story = rows[0];
+
+  if (!story) {
+    return null;
+  }
+
+  const isOwner = isRegisteredSession(session) && story.author_user_id === session.user_id;
+
+  if (story.status === "deleted") {
+    return null;
+  }
+
+  if (story.status !== "published" && !isOwner) {
+    return null;
+  }
+
+  return buildStoryDetail(story);
+}
+
+async function insertStoryPrivacyScan(connection, { session, storyId = null, body, scan }) {
+  const actor = buildStoryActorValues(session);
+  const [result] = await connection.query(
+    `
+      INSERT INTO story_privacy_scans (
+        story_id,
+        user_id,
+        guest_session_id,
+        result_status,
+        summary,
+        findings_json,
+        scanned_text_checksum,
+        created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())
+    `,
+    [
+      storyId,
+      actor.userId,
+      actor.guestSessionId,
+      scan.status,
+      scan.summary,
+      JSON.stringify(scan.findings),
+      createStoryChecksum(body)
+    ]
+  );
+
+  return result.insertId;
+}
+
+async function insertStoryRevision(
+  connection,
+  { storyId, title, tagLabel, body, status, privacyScanId = null }
+) {
+  const [rows] = await connection.query(
+    `
+      SELECT COALESCE(MAX(revision_number), 0) + 1 AS next_revision_number
+      FROM story_revisions
+      WHERE story_id = ?
+    `,
+    [storyId]
+  );
+
+  await connection.query(
+    `
+      INSERT INTO story_revisions (
+        story_id,
+        revision_number,
+        title,
+        tag_label,
+        body,
+        status,
+        privacy_scan_id,
+        created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())
+    `,
+    [
+      storyId,
+      rows[0].next_revision_number,
+      title,
+      tagLabel,
+      body,
+      status,
+      privacyScanId
+    ]
   );
 }
 
@@ -634,6 +917,450 @@ app.post("/api/policies/accept", async (request, response) => {
   });
 });
 
+app.get("/api/stories", async (request, response) => {
+  const ownedByViewerSelect = getOwnedByViewerSelect(request.authSession);
+  const [rows] = await pool.query(
+    `
+      SELECT
+        s.id,
+        s.title,
+        s.tag_label,
+        s.body,
+        s.status,
+        s.published_at,
+        COALESCE(COUNT(sh.id), 0) AS hug_count,
+        ${ownedByViewerSelect.sql}
+      FROM stories s
+      LEFT JOIN story_hugs sh ON sh.story_id = s.id
+      WHERE s.status = 'published'
+      GROUP BY s.id
+      ORDER BY s.published_at DESC, s.id DESC
+      LIMIT 50
+    `,
+    [...ownedByViewerSelect.params]
+  );
+
+  response.json({
+    stories: rows.map(buildStorySummary),
+    emptyState: "No stories have been shared yet. Your reflection could be the first."
+  });
+});
+
+app.get("/api/stories/:storyId", async (request, response) => {
+  const storyId = Number(request.params.storyId);
+
+  if (!Number.isInteger(storyId) || storyId <= 0) {
+    return response.status(400).json({
+      message: "Provide a valid story id."
+    });
+  }
+
+  const story = await fetchStoryById(storyId, request.authSession);
+
+  if (!story) {
+    return response.status(404).json({
+      message: "That story could not be found."
+    });
+  }
+
+  response.json({
+    story
+  });
+});
+
+app.post("/api/stories/privacy-check", async (request, response) => {
+  const postingStatus = await getStoryPostingStatus(request.authSession);
+
+  if (!postingStatus.ok) {
+    return response.status(postingStatus.statusCode).json({
+      message: postingStatus.message
+    });
+  }
+
+  const body = normalizeStoryBody(request.body?.body);
+  const validationError = validateStoryBody(body, {
+    allowShortDraft: true
+  });
+
+  if (validationError) {
+    return response.status(400).json({
+      message: validationError
+    });
+  }
+
+  const scan = runPrivacyCheck(body);
+  const connection = await pool.getConnection();
+
+  try {
+    const scanId = await insertStoryPrivacyScan(connection, {
+      session: request.authSession,
+      body,
+      scan
+    });
+
+    response.json({
+      scan: {
+        id: scanId,
+        ...scan,
+        checkedBodyChecksum: createStoryChecksum(body)
+      }
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+app.post("/api/stories", async (request, response) => {
+  const postingStatus = await getStoryPostingStatus(request.authSession);
+
+  if (!postingStatus.ok) {
+    return response.status(postingStatus.statusCode).json({
+      message: postingStatus.message
+    });
+  }
+
+  const body = normalizeStoryBody(request.body?.body);
+  const validationError = validateStoryBody(body);
+
+  if (validationError) {
+    return response.status(400).json({
+      message: validationError
+    });
+  }
+
+  const scan = runPrivacyCheck(body);
+
+  if (scan.status === "block") {
+    return response.status(400).json({
+      message: scan.summary,
+      scan: {
+        ...scan,
+        checkedBodyChecksum: createStoryChecksum(body)
+      }
+    });
+  }
+
+  const title = generateStoryTitle(body);
+  const tagLabel = suggestStoryTag(body);
+  const actor = buildStoryActorValues(request.authSession);
+  const connection = await pool.getConnection();
+  let storyId = null;
+
+  try {
+    await connection.beginTransaction();
+
+    const [result] = await connection.query(
+      `
+        INSERT INTO stories (
+          author_user_id,
+          author_guest_session_id,
+          title,
+          tag_label,
+          body,
+          status,
+          created_at,
+          updated_at,
+          published_at
+        )
+        VALUES (?, ?, ?, ?, ?, 'published', UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP())
+      `,
+      [actor.userId, actor.guestSessionId, title, tagLabel, body]
+    );
+
+    storyId = result.insertId;
+
+    const privacyScanId = await insertStoryPrivacyScan(connection, {
+      session: request.authSession,
+      storyId,
+      body,
+      scan
+    });
+
+    await insertStoryRevision(connection, {
+      storyId,
+      title,
+      tagLabel,
+      body,
+      status: "published",
+      privacyScanId
+    });
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+
+  const story = await fetchStoryById(storyId, request.authSession);
+
+  response.status(201).json({
+    story,
+    scan: {
+      ...scan,
+      checkedBodyChecksum: createStoryChecksum(body)
+    }
+  });
+});
+
+app.patch("/api/stories/:storyId", async (request, response) => {
+  if (!request.authSession) {
+    return response.status(401).json({
+      message: "Start a session before editing a story."
+    });
+  }
+
+  if (!isRegisteredSession(request.authSession)) {
+    return response.status(403).json({
+      message: "Only registered users can edit published stories."
+    });
+  }
+
+  const postingStatus = await getStoryPostingStatus(request.authSession);
+
+  if (!postingStatus.ok) {
+    return response.status(postingStatus.statusCode).json({
+      message: postingStatus.message
+    });
+  }
+
+  const storyId = Number(request.params.storyId);
+
+  if (!Number.isInteger(storyId) || storyId <= 0) {
+    return response.status(400).json({
+      message: "Provide a valid story id."
+    });
+  }
+
+  const body = normalizeStoryBody(request.body?.body);
+  const validationError = validateStoryBody(body);
+
+  if (validationError) {
+    return response.status(400).json({
+      message: validationError
+    });
+  }
+
+  const scan = runPrivacyCheck(body);
+
+  if (scan.status === "block") {
+    return response.status(400).json({
+      message: scan.summary,
+      scan: {
+        ...scan,
+        checkedBodyChecksum: createStoryChecksum(body)
+      }
+    });
+  }
+
+  const title = generateStoryTitle(body);
+  const tagLabel = suggestStoryTag(body);
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [existingRows] = await connection.query(
+      `
+        SELECT id, status
+        FROM stories
+        WHERE id = ?
+          AND author_user_id = ?
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [storyId, request.authSession.user_id]
+    );
+
+    const story = existingRows[0];
+
+    if (!story || story.status === "deleted") {
+      await connection.rollback();
+      return response.status(404).json({
+        message: "That story is not available for editing."
+      });
+    }
+
+    await connection.query(
+      `
+        UPDATE stories
+        SET title = ?,
+            tag_label = ?,
+            body = ?,
+            status = 'published',
+            hidden_at = NULL,
+            updated_at = UTC_TIMESTAMP()
+        WHERE id = ?
+      `,
+      [title, tagLabel, body, storyId]
+    );
+
+    const privacyScanId = await insertStoryPrivacyScan(connection, {
+      session: request.authSession,
+      storyId,
+      body,
+      scan
+    });
+
+    await insertStoryRevision(connection, {
+      storyId,
+      title,
+      tagLabel,
+      body,
+      status: "published",
+      privacyScanId
+    });
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+
+  const story = await fetchStoryById(storyId, request.authSession);
+
+  response.json({
+    story,
+    scan: {
+      ...scan,
+      checkedBodyChecksum: createStoryChecksum(body)
+    }
+  });
+});
+
+app.delete("/api/stories/:storyId", async (request, response) => {
+  if (!request.authSession) {
+    return response.status(401).json({
+      message: "Start a session before deleting a story."
+    });
+  }
+
+  if (!isRegisteredSession(request.authSession)) {
+    return response.status(403).json({
+      message: "Only registered users can delete published stories."
+    });
+  }
+
+  const storyId = Number(request.params.storyId);
+
+  if (!Number.isInteger(storyId) || storyId <= 0) {
+    return response.status(400).json({
+      message: "Provide a valid story id."
+    });
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [rows] = await connection.query(
+      `
+        SELECT id, title, tag_label, body, status
+        FROM stories
+        WHERE id = ?
+          AND author_user_id = ?
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [storyId, request.authSession.user_id]
+    );
+
+    const story = rows[0];
+
+    if (!story || story.status === "deleted") {
+      await connection.rollback();
+      return response.status(404).json({
+        message: "That story is not available for deletion."
+      });
+    }
+
+    await connection.query(
+      `
+        UPDATE stories
+        SET status = 'deleted',
+            deleted_at = UTC_TIMESTAMP(),
+            updated_at = UTC_TIMESTAMP()
+        WHERE id = ?
+      `,
+      [storyId]
+    );
+
+    await insertStoryRevision(connection, {
+      storyId,
+      title: story.title,
+      tagLabel: story.tag_label,
+      body: story.body,
+      status: "deleted"
+    });
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+
+  response.status(204).send();
+});
+
+app.post("/api/stories/:storyId/hugs", async (request, response) => {
+  if (!request.authSession) {
+    return response.status(401).json({
+      message: "Start a session before sending a hug."
+    });
+  }
+
+  const storyId = Number(request.params.storyId);
+
+  if (!Number.isInteger(storyId) || storyId <= 0) {
+    return response.status(400).json({
+      message: "Provide a valid story id."
+    });
+  }
+
+  const story = await fetchStoryById(storyId, request.authSession);
+
+  if (!story) {
+    return response.status(404).json({
+      message: "That story could not be found."
+    });
+  }
+
+  if (story.viewerIsAuthor) {
+    return response.status(400).json({
+      message: "You cannot send a hug to your own story."
+    });
+  }
+
+  const actor = buildStoryActorValues(request.authSession);
+
+  await pool.query(
+    `
+      INSERT INTO story_hugs (
+        story_id,
+        user_id,
+        guest_session_id,
+        created_at
+      )
+      VALUES (?, ?, ?, UTC_TIMESTAMP())
+      ON DUPLICATE KEY UPDATE
+        created_at = created_at
+    `,
+    [storyId, actor.userId, actor.guestSessionId]
+  );
+
+  const updatedStory = await fetchStoryById(storyId, request.authSession);
+
+  response.json({
+    story: updatedStory
+  });
+});
+
 app.get("/api/dashboard/my-stories", async (request, response) => {
   if (!request.authSession) {
     return response.status(401).json({
@@ -647,11 +1374,36 @@ app.get("/api/dashboard/my-stories", async (request, response) => {
     });
   }
 
+  const [rows] = await pool.query(
+    `
+      SELECT
+        s.id,
+        s.title,
+        s.tag_label,
+        s.body,
+        s.status,
+        s.published_at,
+        COALESCE(COUNT(sh.id), 0) AS hug_count
+      FROM stories s
+      LEFT JOIN story_hugs sh ON sh.story_id = s.id
+      WHERE s.author_user_id = ?
+        AND s.status <> 'deleted'
+      GROUP BY s.id
+      ORDER BY s.published_at DESC, s.id DESC
+    `,
+    [request.authSession.user_id]
+  );
+
   response.json({
     unreadCommentCount: 0,
-    stories: [],
+    stories: rows.map((story) => ({
+      ...buildStorySummary(story),
+      body: story.body,
+      tagLabel: story.tag_label,
+      status: story.status
+    })),
     emptyState:
-      "Your published stories will appear here once story creation is connected."
+      "Your published stories will appear here once you share your first reflection."
   });
 });
 
