@@ -19,3 +19,7 @@ yarn-error.log*
 # editors and OS files
 .DS_Store
 .vscode/
+
+# local Codex workspace metadata
+.codex/*
+!.codex/.gitkeep
