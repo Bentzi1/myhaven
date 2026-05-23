@@ -10,6 +10,7 @@
   "shutdownAction": "stopCompose",
   "postCreateCommand": ".devcontainer/post-create.sh",
   "postStartCommand": "bash .devcontainer/pin-codex-extension.sh",
+  "postAttachCommand": "bash .devcontainer/pin-codex-extension.sh",
   "forwardPorts": [5173, 3001],
   "portsAttributes": {
     "5173": {
@@ -28,6 +29,7 @@
         "extensions.autoUpdate": false
       },
       "extensions": [
+        "openai.chatgpt",
         "dsznajder.es7-react-js-snippets",
         "dbaeumer.vscode-eslint"
       ]
