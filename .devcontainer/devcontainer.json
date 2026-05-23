@@ -9,6 +9,7 @@
   },
   "shutdownAction": "stopCompose",
   "postCreateCommand": ".devcontainer/post-create.sh",
+  "postStartCommand": "bash .devcontainer/pin-codex-extension.sh",
   "forwardPorts": [5173, 3001],
   "portsAttributes": {
     "5173": {
@@ -22,9 +23,12 @@
   },
   "customizations": {
     "vscode": {
+      "settings": {
+        "extensions.autoCheckUpdates": false,
+        "extensions.autoUpdate": false
+      },
       "extensions": [
         "dsznajder.es7-react-js-snippets",
-        "openai.chatgpt",
         "dbaeumer.vscode-eslint"
       ]
     }
