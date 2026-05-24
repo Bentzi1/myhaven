@@ -8,12 +8,14 @@ git config --global --add safe.directory /workspaces
 # Docker named volumes start out owned by root, which blocks the `node`
 # user used by the devcontainer from installing dependencies on rebuild.
 for dir in \
+  /home/node/.codex \
+  /home/node/.npm-global \
   /workspaces/node_modules \
   /workspaces/frontend/node_modules \
   /workspaces/backend/node_modules
 do
   mkdir -p "$dir"
-  chown -R node:node "$dir"
+  chown -R node:node "$dir" 2>/dev/null || true
 done
 
 # Some bind-mounted workspaces surface files as `nobody`, which leaves the
