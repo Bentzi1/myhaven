@@ -25,5 +25,9 @@ else
 fi
 
 if ! command -v codex >/dev/null 2>&1; then
-  npm i -g @openai/codex
+  if [ "${INSTALL_CODEX_CLI:-0}" = "1" ]; then
+    npm i -g @openai/codex
+  else
+    echo "Codex CLI is not installed; skipping npm install. The VS Code Codex extension uses its bundled app-server."
+  fi
 fi

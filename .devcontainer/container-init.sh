@@ -7,16 +7,33 @@ git config --global --add safe.directory /workspaces
 
 # Docker named volumes start out owned by root, which blocks the `node`
 # user used by the devcontainer from installing dependencies on rebuild.
-for dir in \
-  /home/node/.codex \
-  /home/node/.npm-global \
-  /workspaces/node_modules \
-  /workspaces/frontend/node_modules \
-  /workspaces/backend/node_modules
-do
+# Avoid recursively chowning bind mounts such as /home/node/.codex and the
+# source tree; on Docker Desktop those can be very slow and can stall startup.
+mkdir -p /home/node/.codex
+
+ensure_owned_dir() {
+  local dir="$1"
+  local node_owner
+
+  node_owner="$(id -u node):$(id -g node)"
   mkdir -p "$dir"
-  chown -R node:node "$dir" 2>/dev/null || true
-done
+
+  if [ "$(stat -c '%u:%g' "$dir" 2>/dev/null || true)" != "$node_owner" ]; then
+    chown -R node:node "$dir" 2>/dev/null || true
+  fi
+}
+
+ensure_owned_dir /home/node/.npm-global
+ensure_owned_dir /workspaces/node_modules
+
+case "${DEVCONTAINER_ROLE:-}" in
+  frontend)
+    ensure_owned_dir /workspaces/frontend/node_modules
+    ;;
+  backend)
+    ensure_owned_dir /workspaces/backend/node_modules
+    ;;
+esac
 
 # Some bind-mounted workspaces surface files as `nobody`, which leaves the
 # `node` user unable to update npm manifests during post-create setup.
@@ -27,20 +44,8 @@ for file in \
   /workspaces/backend/package.json
 do
   if [ -e "$file" ]; then
-    chown node:node "$file"
-    chmod u+w "$file"
-  fi
-done
-
-# Some setups expose the app directories as `nobody`, which blocks normal
-# source edits from the devcontainer user. Fix ownership eagerly so Vite
-# config and source files remain editable inside the container.
-for dir in \
-  /workspaces/frontend \
-  /workspaces/backend
-do
-  if [ -e "$dir" ]; then
-    chown -R node:node "$dir"
+    chown node:node "$file" 2>/dev/null || true
+    chmod u+w "$file" 2>/dev/null || true
   fi
 done
 

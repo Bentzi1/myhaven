@@ -25,7 +25,7 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "openai.chatgpt",
+        "openai.chatgpt@26.519.32039",
         "dsznajder.es7-react-js-snippets",
         "dbaeumer.vscode-eslint"
       ]
