@@ -25,13 +25,14 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "openai.chatgpt@26.519.32039",
+        "openai.chatgpt",
         "dsznajder.es7-react-js-snippets",
         "dbaeumer.vscode-eslint"
       ]
     }
   },
   "mounts": [
-    "source=${localEnv:USERPROFILE}/.codex,target=/home/node/.codex,type=bind,consistency=cached"
+    "source=storyshare2-codex-state,target=/home/node/.codex,type=volume",
+    "source=${localEnv:USERPROFILE}/.codex,target=/mnt/host-codex,type=bind,consistency=cached,readonly"
   ]
 }

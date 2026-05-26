@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haven - StoryShare Preview</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-100 flex min-h-screen items-center justify-center p-4 antialiased">
+
+    <div class="relative w-[375px] h-[780px] bg-slate-50 rounded-[48px] shadow-[0_24px_60px_-15px_rgba(30,41,59,0.2)] border-[12px] border-slate-800 overflow-hidden flex flex-col p-5 select-none">
+        
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-36 h-6 bg-slate-800 rounded-b-2xl z-50 flex items-center justify-center">
+            <div class="w-12 h-1 bg-slate-700 rounded-full mb-1"></div>
+        </div>
+
+        <header class="flex w-full items-center justify-between pt-6 pb-4">
+            <div class="flex items-center gap-2">
+                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-xs border border-slate-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#78A6C8" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+                    </svg>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight text-[#78A6C8]">
+                    Haven
+                </h1>
+            </div>
+
+            <button class="flex items-center gap-1.5 rounded-full bg-white border border-slate-200/80 px-3 py-1.5 text-xs text-slate-400 shadow-xs cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.642 10.642Z" />
+                </svg>
+                <span>Search</span>
+            </button>
+        </header>
+
+        <main class="grid grid-cols-2 gap-3 overflow-y-auto flex-1 pb-24 pt-2 no-scrollbar">
+            
+            <div class="flex flex-col bg-white border border-slate-100 rounded-2xl p-3 shadow-xs cursor-pointer transform transition duration-200 hover:-translate-y-0.5">
+                <div class="aspect-square w-full rounded-xl bg-gradient-to-tr from-teal-100 via-emerald-100 to-cyan-100 opacity-90 mb-3.5"></div>
+                <h3 class="text-xs font-bold text-slate-800 line-clamp-1 leading-tight">A silent walk in the city...</h3>
+                <p class="mt-1 text-[11px] text-slate-400 line-clamp-2 leading-snug flex-1">Only then did I have such a lucid moment in the city...</p>
+                <div class="mt-3 flex">
+                    <span class="rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-600">Calming</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col bg-white border border-slate-100 rounded-2xl p-3 shadow-xs cursor-pointer transform transition duration-200 hover:-translate-y-0.5">
+                <div class="aspect-square w-full rounded-xl bg-gradient-to-tr from-orange-100 via-amber-100 to-yellow-100 opacity-90 mb-3.5"></div>
+                <h3 class="text-xs font-bold text-slate-800 line-clamp-1 leading-tight">Cooking my grandmother's recipe...</h3>
+                <p class="mt-1 text-[11px] text-slate-400 line-clamp-2 leading-snug flex-1">The taste of sweetness immediately takes me back...</p>
+                <div class="mt-3 flex">
+                    <span class="rounded-full border border-amber-100 bg-amber-50 px-2 py-0.5 text-[9px] font-bold text-amber-600">Poetry</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col bg-white border border-slate-100 rounded-2xl p-3 shadow-xs cursor-pointer transform transition duration-200 hover:-translate-y-0.5">
+                <div class="aspect-square w-full rounded-xl bg-gradient-to-tr from-indigo-100 via-purple-100 to-pink-100 opacity-90 mb-3.5"></div>
+                <h3 class="text-xs font-bold text-slate-800 line-clamp-1 leading-tight">A relaxing day</h3>
+                <p class="mt-1 text-[11px] text-slate-400 line-clamp-2 leading-snug flex-1">The peaceful sound of raindrops on the window...</p>
+                <div class="mt-3 flex">
+                    <span class="rounded-full border border-purple-100 bg-purple-50 px-2 py-0.5 text-[9px] font-bold text-purple-600">Melancholy</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col bg-white border border-slate-100 rounded-2xl p-3 shadow-xs cursor-pointer transform transition duration-200 hover:-translate-y-0.5">
+                <div class="aspect-square w-full rounded-xl bg-gradient-to-tr from-stone-200 via-orange-100 to-amber-100 opacity-90 mb-3.5"></div>
+                <h3 class="text-xs font-bold text-slate-800 line-clamp-1 leading-tight">Travel through...</h3>
+                <p class="mt-1 text-[11px] text-slate-400 line-clamp-2 leading-snug flex-1">Soft light and textures were easing my mind...</p>
+                <div class="mt-3 flex">
+                    <span class="rounded-full border border-orange-100 bg-orange-50 px-2 py-0.5 text-[9px] font-bold text-orange-600">Family</span>
+                </div>
+            </div>
+
+        </main>
+
+        <nav class="absolute bottom-5 left-5 right-5 flex h-16 items-center justify-around rounded-2xl border border-slate-100 bg-white/90 px-4 shadow-lg backdrop-blur-md">
+            <button class="flex flex-col items-center gap-0.5 text-[#78A6C8] cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                </svg>
+                <span class="text-[9px] font-bold">Home</span>
+            </button>
+
+            <button class="absolute -top-5 left-1/2 -translate-x-1/2 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-[#78A6C8] to-[#93b9d5] text-white shadow-md shadow-blue-200 cursor-pointer transform active:scale-95 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                </svg>
+            </button>
+
+            <button class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-slate-500 cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                </svg>
+                <span class="text-[9px] font-bold">My Stories</span>
+            </button>
+        </nav>
+
+        <div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-slate-800 rounded-full"></div>
+    </div>
+
+</body>
+</html>

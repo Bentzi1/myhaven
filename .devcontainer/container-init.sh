@@ -7,9 +7,8 @@ git config --global --add safe.directory /workspaces
 
 # Docker named volumes start out owned by root, which blocks the `node`
 # user used by the devcontainer from installing dependencies on rebuild.
-# Avoid recursively chowning bind mounts such as /home/node/.codex and the
-# source tree; on Docker Desktop those can be very slow and can stall startup.
-mkdir -p /home/node/.codex
+# Avoid recursively chowning bind mounts such as the source tree; on Docker
+# Desktop those can be very slow and can stall startup.
 
 ensure_owned_dir() {
   local dir="$1"
@@ -24,6 +23,7 @@ ensure_owned_dir() {
 }
 
 ensure_owned_dir /home/node/.npm-global
+ensure_owned_dir /home/node/.codex
 ensure_owned_dir /workspaces/node_modules
 
 case "${DEVCONTAINER_ROLE:-}" in

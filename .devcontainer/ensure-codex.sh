@@ -3,6 +3,20 @@ set -euo pipefail
 
 mkdir -p "$HOME/.codex" "$HOME/.npm-global/bin"
 
+host_codex_dir="${HOST_CODEX_HOME:-/mnt/host-codex}"
+if [ -d "$host_codex_dir" ]; then
+  for file in auth.json config.toml; do
+    if [ -f "$host_codex_dir/$file" ]; then
+      cp "$host_codex_dir/$file" "$HOME/.codex/$file"
+      chmod 600 "$HOME/.codex/$file" 2>/dev/null || true
+    fi
+  done
+
+  if [ -d "$host_codex_dir/rules" ] && [ ! -e "$HOME/.codex/rules" ]; then
+    cp -R "$host_codex_dir/rules" "$HOME/.codex/rules"
+  fi
+fi
+
 npm config set prefix "$HOME/.npm-global" >/dev/null
 export PATH="$HOME/.npm-global/bin:$PATH"
 
