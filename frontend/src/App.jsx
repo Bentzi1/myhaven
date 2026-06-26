@@ -6,9 +6,9 @@ import {
   deleteStory,
   getActivePolicy,
   getAuthConfig,
+  getCommunityStories,
   getCurrentSession,
   getMyStories,
-  getStories,
   getStory,
   loginManualAccount,
   logout,
@@ -105,11 +105,11 @@ function App() {
   });
   const [activePolicy, setActivePolicy] = useState(null);
   const [pathname, setPathname] = useState(window.location.pathname);
-  const [feed, setFeed] = useState([]);
-  const [feedBusy, setFeedBusy] = useState(false);
-  const [feedError, setFeedError] = useState("");
-  const [feedEmptyState, setFeedEmptyState] = useState(
-    "No stories have been shared yet. Your reflection could be the first."
+  const [communityStories, setCommunityStories] = useState([]);
+  const [communityBusy, setCommunityBusy] = useState(false);
+  const [communityError, setCommunityError] = useState("");
+  const [communityEmptyState, setCommunityEmptyState] = useState(
+    "No community stories are available yet. Check back soon or share a reflection of your own."
   );
   const [dashboard, setDashboard] = useState(null);
   const [dashboardBusy, setDashboardBusy] = useState(false);
@@ -198,29 +198,31 @@ function App() {
   }, []);
 
   useEffect(() => {
-    async function loadFeed() {
+    async function loadCommunityStories() {
       if (!session?.hasAcceptedActivePolicy) {
         return;
       }
 
-      setFeedBusy(true);
-      setFeedError("");
+      setCommunityBusy(true);
+      setCommunityError("");
 
       try {
-        const payload = await getStories(getStoredToken());
-        setFeed(payload.stories || []);
-        setFeedEmptyState(
+        const payload = await getCommunityStories(getStoredToken(), {
+          sort: "relevant"
+        });
+        setCommunityStories(payload.stories || []);
+        setCommunityEmptyState(
           payload.emptyState ||
-            "No stories have been shared yet. Your reflection could be the first."
+            "No community stories are available yet. Check back soon or share a reflection of your own."
         );
       } catch (loadError) {
-        setFeedError(loadError.message);
+        setCommunityError(loadError.message);
       } finally {
-        setFeedBusy(false);
+        setCommunityBusy(false);
       }
     }
 
-    loadFeed();
+    loadCommunityStories();
   }, [session, storyRefreshKey]);
 
   useEffect(() => {
@@ -408,13 +410,13 @@ function App() {
     } finally {
       setStoredToken(null);
       setSession(null);
-      setFeed([]);
+      setCommunityStories([]);
       setDashboard(null);
       setSelectedStoryId(null);
       setSelectedStory(null);
       setStoryError("");
       setDashboardError("");
-      setFeedError("");
+      setCommunityError("");
       resetEditorState();
       setBusy(false);
       window.history.replaceState({}, "", "/");
@@ -514,7 +516,11 @@ function App() {
 
       setSelectedStoryId(payload.story.id);
       setSelectedStory(payload.story);
-      setStoryBackTarget(editorReturnScreen);
+      setStoryBackTarget(
+        editorMode === "create" && session?.sessionType === "registered"
+          ? "dashboard"
+          : editorReturnScreen
+      );
       setStoryRefreshKey((current) => current + 1);
       resetEditorState();
 
@@ -539,6 +545,7 @@ function App() {
     }
 
     setDashboardError("");
+    setStoryError("");
 
     try {
       await deleteStory(story.id, getStoredToken());
@@ -547,9 +554,16 @@ function App() {
       if (selectedStoryId === story.id) {
         setSelectedStoryId(null);
         setSelectedStory(null);
+        startTransition(() => {
+          setScreen(storyBackTarget);
+        });
       }
     } catch (deleteError) {
-      setDashboardError(deleteError.message);
+      if (screen === "story") {
+        setStoryError(deleteError.message);
+      } else {
+        setDashboardError(deleteError.message);
+      }
     }
   }
 
@@ -660,19 +674,17 @@ function App() {
             ? `Welcome, ${session.user.username}`
             : "Guest session"
         }
-        title="Shared stories"
+        title="Community stories"
         description={
           session.sessionType === "registered"
-            ? "Read quietly, write when you are ready, and keep track of your own stories from My Stories."
-            : "Read quietly and share anonymously during this guest session."
+            ? "Read what others have shared. Reflections you publish are kept in My Stories."
+            : "Read what others have shared and publish anonymously during this guest session."
         }
-        stories={feed}
-        emptyState={feedEmptyState}
-        busy={feedBusy}
-        error={feedError}
-        secondaryNavLabel={
-          session.sessionType === "registered" ? "My Stories" : "Guest"
-        }
+        stories={communityStories}
+        emptyState={communityEmptyState}
+        busy={communityBusy}
+        error={communityError}
+        secondaryNavLabel="My Stories"
         secondaryNavDisabled={session.sessionType !== "registered"}
         onOpenStory={(story) => openStory(story.id, "home")}
         onWrite={() =>
@@ -697,8 +709,9 @@ function App() {
   if (screen === "dashboard" && session?.sessionType === "registered") {
     return (
       <MyStoriesScreen
-        title="My Haven"
-        summaryCount={dashboard?.stories?.length || 0}
+        title="My Stories"
+        summaryCount={dashboard?.totalStoryCount ?? dashboard?.stories?.length ?? 0}
+        supportCount={dashboard?.totalHugCount || 0}
         stories={decorateDashboardStories(dashboard?.stories || [])}
         busy={dashboardBusy}
         error={dashboardError}
@@ -767,11 +780,10 @@ function App() {
           }
           actionDisabled={!selectedStory.canSendHug}
           onBack={handleBackFromStory}
-          onMenu={
-            selectedStory.canEdit
-              ? () => handleEditStory(selectedStory, storyBackTarget)
-              : undefined
-          }
+          canEdit={selectedStory.canEdit}
+          canDelete={selectedStory.canDelete}
+          onEdit={() => handleEditStory(selectedStory, storyBackTarget)}
+          onDelete={() => handleDeleteStory(selectedStory)}
           onSendHug={handleSendHug}
         />
       );

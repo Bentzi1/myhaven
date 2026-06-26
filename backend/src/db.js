@@ -96,7 +96,13 @@ async function ensureDatabaseSchema() {
         continue;
       }
 
-      await connection.query(sql);
+      try {
+        await connection.query(sql);
+      } catch (error) {
+        error.message = `Failed to apply migration ${filename}: ${error.message}`;
+        throw error;
+      }
+
       await connection.query(
         `
           INSERT INTO schema_migrations (

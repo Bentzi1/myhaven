@@ -35,3 +35,30 @@ export const ReadyToReview = {
     publishEnabled: true
   }
 }
+
+export const CheckingPrivacy = {
+  args: {
+    initialValue: readyText,
+    checkBusy: true,
+    privacyMessage: "Scanning this draft for identifying details..."
+  }
+}
+
+export const PrivacyWarning = {
+  args: {
+    initialValue: readyText,
+    publishEnabled: true,
+    helperTone: "warning",
+    privacyMessage: "A few details may make this story easier to identify. Review them before publishing."
+  }
+}
+
+export const Publishing = {
+  args: {
+    initialValue: readyText,
+    publishEnabled: true,
+    publishBusy: true,
+    helperTone: "success",
+    privacyMessage: "No obvious identifying details were detected in this draft."
+  }
+}

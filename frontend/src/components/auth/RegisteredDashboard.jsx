@@ -13,7 +13,7 @@ export function RegisteredDashboard({
     <AuthShell
       eyebrow="My Stories"
       title={`Welcome, ${session?.user?.username}`}
-      description="Registered users can access My Stories, unread comment counts, and story management from here."
+      description="Registered users can review the stories they shared and the support those stories received."
       footer={
         <button
           type="button"
@@ -41,7 +41,7 @@ export function RegisteredDashboard({
               </span>
             </span>
             <span className="rounded-full bg-[#78A6C8] px-3 py-1 text-sm font-semibold text-white">
-              {dashboard?.unreadCommentCount ?? 0}
+              {dashboard?.totalStoryCount ?? dashboard?.stories?.length ?? 0}
             </span>
           </button>
         </nav>
@@ -58,10 +58,10 @@ export function RegisteredDashboard({
             </div>
             <div className="rounded-2xl bg-slate-100 px-3 py-2 text-right">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Unread comments
+                Hugs received
               </p>
               <p className="mt-2 text-2xl font-bold text-slate-800">
-                {dashboard?.unreadCommentCount ?? 0}
+                {dashboard?.totalHugCount ?? 0}
               </p>
             </div>
           </div>
@@ -93,8 +93,7 @@ export function RegisteredDashboard({
         </div>
 
         <InlineNotice tone="info">
-          Edit and delete controls are reserved for registered users and will activate as
-          soon as story management endpoints are added.
+          Main Screen shows community stories. My Stories keeps the reflections you shared.
         </InlineNotice>
 
         <ActionButton variant="secondary" onClick={onLogout}>

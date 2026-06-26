@@ -1,4 +1,4 @@
-import { GearIcon, HeartIcon, HomeIcon, PencilIcon, UserIcon } from "./StoryIcons"
+import { HeartIcon, HomeIcon, PencilIcon, UserIcon } from "./StoryIcons"
 import { StoryFrame } from "./StoryFrame"
 
 const defaultStories = [
@@ -80,9 +80,11 @@ function StoryCard({
 }
 
 export function MyStoriesScreen({
-  title = "My Haven",
+  title = "My Stories",
   summaryCount = 3,
-  summaryLabel = "Stories shared safely",
+  summaryLabel = "Stories shared by me",
+  supportCount = 0,
+  supportLabel = "Hugs received",
   stories = defaultStories,
   busy = false,
   error = "",
@@ -102,18 +104,24 @@ export function MyStoriesScreen({
         <button
           type="button"
           onClick={onSettings}
-          className="text-[#8BB9D9] transition hover:text-[#78A6C8]"
-          aria-label="Account settings"
+          className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-500 shadow-sm transition hover:text-slate-700"
         >
-          <GearIcon />
+          Leave
         </button>
       </div>
 
       <div className="mb-6 px-6">
         <div className="flex items-center justify-between rounded-2xl border border-gray-50 bg-white p-4 shadow-sm">
-          <div className="flex flex-col">
-            <span className="text-2xl font-bold text-gray-800">{summaryCount}</span>
-            <span className="text-xs text-gray-400">{summaryLabel}</span>
+          <div className="grid flex-1 grid-cols-2 gap-4">
+            <div className="flex flex-col">
+              <span className="text-2xl font-bold text-gray-800">{summaryCount}</span>
+              <span className="text-xs text-gray-400">{summaryLabel}</span>
+            </div>
+
+            <div className="flex flex-col">
+              <span className="text-2xl font-bold text-gray-800">{supportCount}</span>
+              <span className="text-xs text-gray-400">{supportLabel}</span>
+            </div>
           </div>
 
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#EBE3F0] to-[#B8AED0] text-white">

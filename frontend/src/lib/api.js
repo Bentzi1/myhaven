@@ -84,8 +84,20 @@ export function getMyStories(token) {
   });
 }
 
-export function getStories(token) {
-  return request("/stories", {
+export function getCommunityStories(token, options = {}) {
+  const params = new URLSearchParams();
+
+  if (options.sort) {
+    params.set("sort", options.sort);
+  }
+
+  if (options.limit) {
+    params.set("limit", String(options.limit));
+  }
+
+  const query = params.toString();
+
+  return request(query ? `/stories?${query}` : "/stories", {
     token
   });
 }

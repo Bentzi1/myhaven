@@ -1,37 +1,29 @@
 import { StoryFeedScreen } from "./StoryFeedScreen"
 
-const prototypeStories = [
+const communityStories = [
   {
     id: "silent-city-walk",
     title: "A silent walk in the city...",
-    excerpt: "Only then did I have such a lucid moment in the city...",
-    tagLabel: "Calming",
-    thumbnailClassName: "from-teal-100 via-emerald-100 to-cyan-100",
-    tagClassName: "border-emerald-100 bg-emerald-50 text-emerald-600"
+    excerpt: "Only then did I have such a lucid moment in the city, surrounded by motion but finally able to breathe.",
+    tagLabel: "#release",
+    publishedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
+    hugCount: 8
   },
   {
     id: "grandmothers-recipe",
     title: "Cooking my grandmother's recipe...",
-    excerpt: "The taste of sweetness immediately takes me back...",
-    tagLabel: "Poetry",
-    thumbnailClassName: "from-orange-100 via-amber-100 to-yellow-100",
-    tagClassName: "border-amber-100 bg-amber-50 text-amber-600"
+    excerpt: "The taste of sweetness immediately takes me back to an afternoon I thought I had forgotten.",
+    tagLabel: "#memories",
+    publishedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    hugCount: 12
   },
   {
     id: "relaxing-day",
     title: "A relaxing day",
-    excerpt: "The peaceful sound of raindrops on the window...",
-    tagLabel: "Melancholy",
-    thumbnailClassName: "from-indigo-100 via-purple-100 to-pink-100",
-    tagClassName: "border-purple-100 bg-purple-50 text-purple-600"
-  },
-  {
-    id: "travel-through",
-    title: "Travel through...",
-    excerpt: "Soft light and textures were easing my mind...",
-    tagLabel: "Family",
-    thumbnailClassName: "from-stone-200 via-orange-100 to-amber-100",
-    tagClassName: "border-orange-100 bg-orange-50 text-orange-600"
+    excerpt: "The peaceful sound of raindrops on the window made the room feel less lonely.",
+    tagLabel: "#healing",
+    publishedAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
+    hugCount: 4
   }
 ]
 
@@ -43,8 +35,11 @@ const meta = {
     layout: "fullscreen"
   },
   args: {
-    variant: "prototype",
-    stories: prototypeStories
+    eyebrow: "Community",
+    title: "Community stories",
+    description: "Read what others have shared. Reflections you publish are kept in My Stories.",
+    stories: communityStories,
+    secondaryNavLabel: "My Stories"
   },
   argTypes: {
     onOpenStory: { action: "story-opened" },
@@ -55,7 +50,15 @@ const meta = {
 
 export default meta
 
-export const HtmlPrototype = {}
+export const RegisteredCommunity = {}
+
+export const GuestCommunity = {
+  args: {
+    eyebrow: "Guest session",
+    description: "Read what others have shared and publish anonymously during this guest session.",
+    secondaryNavDisabled: true
+  }
+}
 
 export const Loading = {
   args: {
@@ -66,5 +69,12 @@ export const Loading = {
 export const ErrorState = {
   args: {
     error: "Stories could not be loaded. Try again in a moment."
+  }
+}
+
+export const Empty = {
+  args: {
+    stories: [],
+    emptyState: "No community stories are available yet. Check back soon or share a reflection of your own."
   }
 }

@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { BackIcon, DotsIcon, HeartIcon } from "./StoryIcons"
 import { StoryFrame } from "./StoryFrame"
 
@@ -20,11 +21,17 @@ For years, I've kept this memory locked away. Not because it's sad, but because 
 Sometimes the safest place for a memory is out in the open, where it can float away like the fog.`,
   actionLabel = "Send a Hug",
   actionDisabled = false,
+  canEdit = false,
+  canDelete = false,
   onBack,
   onMenu,
+  onEdit,
+  onDelete,
   onSendHug
 }) {
+  const [actionsOpen, setActionsOpen] = useState(false)
   const paragraphs = getParagraphs(body)
+  const hasActions = Boolean(onMenu || canEdit || canDelete)
 
   return (
     <StoryFrame>
@@ -40,18 +47,56 @@ Sometimes the safest place for a memory is out in the open, where it can float a
 
         <button
           type="button"
-          onClick={onMenu}
-          disabled={!onMenu}
+          onClick={() => {
+            if (canEdit || canDelete) {
+              setActionsOpen((current) => !current)
+              return
+            }
+
+            onMenu?.()
+          }}
+          disabled={!hasActions}
           className={`transition ${
-            onMenu
+            hasActions
               ? "text-gray-400 hover:text-gray-600"
               : "cursor-not-allowed text-slate-200"
           }`}
           aria-label="Story actions"
+          aria-expanded={actionsOpen}
         >
           <DotsIcon />
         </button>
       </div>
+
+      {actionsOpen ? (
+        <div className="absolute right-6 top-20 z-20 w-36 overflow-hidden rounded-2xl border border-slate-100 bg-white text-sm shadow-xl">
+          {canEdit ? (
+            <button
+              type="button"
+              onClick={() => {
+                setActionsOpen(false)
+                onEdit?.()
+              }}
+              className="block w-full px-4 py-3 text-left font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              Edit
+            </button>
+          ) : null}
+
+          {canDelete ? (
+            <button
+              type="button"
+              onClick={() => {
+                setActionsOpen(false)
+                onDelete?.()
+              }}
+              className="block w-full px-4 py-3 text-left font-medium text-rose-600 transition hover:bg-rose-50"
+            >
+              Delete
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex-1 overflow-y-auto px-6 pb-24">
         <div className="mb-6 mt-4">

@@ -320,6 +320,62 @@ async function getStoryPostingStatus(session) {
   };
 }
 
+async function getStoryReadStatus(session) {
+  if (!session) {
+    return {
+      ok: false,
+      statusCode: 401,
+      message: "Start a session before reading community stories."
+    };
+  }
+
+  const activePolicy = await getActivePolicyVersion();
+
+  if (!activePolicy) {
+    return {
+      ok: false,
+      statusCode: 503,
+      message: "No active policy version is available."
+    };
+  }
+
+  const hasAcceptedPolicy = await getPolicyAcceptanceStatus(session, activePolicy);
+
+  if (!hasAcceptedPolicy) {
+    return {
+      ok: false,
+      statusCode: 403,
+      message: "Accept the current policy before reading community stories."
+    };
+  }
+
+  return {
+    ok: true,
+    activePolicy
+  };
+}
+
+function getCommunityStoryFilter(session, storyAlias = "s") {
+  if (isRegisteredSession(session)) {
+    return {
+      sql: `AND (${storyAlias}.author_user_id IS NULL OR ${storyAlias}.author_user_id <> ?)`,
+      params: [session.user_id]
+    };
+  }
+
+  if (session?.session_type === "guest") {
+    return {
+      sql: `AND (${storyAlias}.author_guest_session_id IS NULL OR ${storyAlias}.author_guest_session_id <> ?)`,
+      params: [session.id]
+    };
+  }
+
+  return {
+    sql: "",
+    params: []
+  };
+}
+
 function getViewerAuthorSelect(session, storyAlias = "s") {
   if (isRegisteredSession(session)) {
     return {
@@ -918,7 +974,21 @@ app.post("/api/policies/accept", async (request, response) => {
 });
 
 app.get("/api/stories", async (request, response) => {
+  const readStatus = await getStoryReadStatus(request.authSession);
+
+  if (!readStatus.ok) {
+    return response.status(readStatus.statusCode).json({
+      message: readStatus.message
+    });
+  }
+
   const ownedByViewerSelect = getOwnedByViewerSelect(request.authSession);
+  const communityStoryFilter = getCommunityStoryFilter(request.authSession);
+  const limit = Math.min(
+    Math.max(Number.parseInt(request.query.limit, 10) || 50, 1),
+    50
+  );
+
   const [rows] = await pool.query(
     `
       SELECT
@@ -933,20 +1003,37 @@ app.get("/api/stories", async (request, response) => {
       FROM stories s
       LEFT JOIN story_hugs sh ON sh.story_id = s.id
       WHERE s.status = 'published'
+        ${communityStoryFilter.sql}
       GROUP BY s.id
       ORDER BY s.published_at DESC, s.id DESC
-      LIMIT 50
+      LIMIT ?
     `,
-    [...ownedByViewerSelect.params]
+    [
+      ...ownedByViewerSelect.params,
+      ...communityStoryFilter.params,
+      limit
+    ]
   );
 
   response.json({
+    scope: "community",
+    sort: request.query.sort === "newest" ? "newest" : "relevant",
+    excludesOwnStories: true,
     stories: rows.map(buildStorySummary),
-    emptyState: "No stories have been shared yet. Your reflection could be the first."
+    emptyState:
+      "No community stories are available yet. Check back soon or share a reflection of your own."
   });
 });
 
 app.get("/api/stories/:storyId", async (request, response) => {
+  const readStatus = await getStoryReadStatus(request.authSession);
+
+  if (!readStatus.ok) {
+    return response.status(readStatus.statusCode).json({
+      message: readStatus.message
+    });
+  }
+
   const storyId = Number(request.params.storyId);
 
   if (!Number.isInteger(storyId) || storyId <= 0) {
@@ -1309,9 +1396,11 @@ app.delete("/api/stories/:storyId", async (request, response) => {
 });
 
 app.post("/api/stories/:storyId/hugs", async (request, response) => {
-  if (!request.authSession) {
-    return response.status(401).json({
-      message: "Start a session before sending a hug."
+  const readStatus = await getStoryReadStatus(request.authSession);
+
+  if (!readStatus.ok) {
+    return response.status(readStatus.statusCode).json({
+      message: readStatus.message
     });
   }
 
@@ -1383,7 +1472,8 @@ app.get("/api/dashboard/my-stories", async (request, response) => {
         s.body,
         s.status,
         s.published_at,
-        COALESCE(COUNT(sh.id), 0) AS hug_count
+        COALESCE(COUNT(sh.id), 0) AS hug_count,
+        1 AS owned_by_viewer
       FROM stories s
       LEFT JOIN story_hugs sh ON sh.story_id = s.id
       WHERE s.author_user_id = ?
@@ -1394,16 +1484,23 @@ app.get("/api/dashboard/my-stories", async (request, response) => {
     [request.authSession.user_id]
   );
 
-  response.json({
-    unreadCommentCount: 0,
-    stories: rows.map((story) => ({
+  const stories = rows.map((story) => ({
       ...buildStorySummary(story),
       body: story.body,
       tagLabel: story.tag_label,
       status: story.status
-    })),
+    }));
+
+  response.json({
+    scope: "owned",
+    totalStoryCount: stories.length,
+    totalHugCount: stories.reduce(
+      (total, story) => total + Number(story.hugCount || 0),
+      0
+    ),
+    stories,
     emptyState:
-      "Your published stories will appear here once you share your first reflection."
+      "Stories you share will appear here once you publish your first reflection."
   });
 });
 
